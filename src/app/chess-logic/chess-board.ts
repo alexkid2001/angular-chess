@@ -1,5 +1,5 @@
 import {Piece} from "./pieces/piece";
-import {Color, FENChar} from "./models";
+import {Color, Coords, FENChar, SafeSquares} from "./models";
 import {Rook} from "./pieces/rook";
 import {Knight} from "./pieces/knight";
 import {Bishop} from "./pieces/bishop";
@@ -9,6 +9,7 @@ import {Pawn} from "./pieces/pawn";
 
 export class ChessBoard {
   private chessBoard: (Piece | null)[][];
+  private readonly chessBoardSize: number = 8;
   private _playerColor: Color = Color.White;
 
   constructor() {
@@ -68,5 +69,105 @@ export class ChessBoard {
     return this.chessBoard.map((row) => {
       return row.map(piece => piece instanceof Piece ? piece. FENChar : null)
     })
+  }
+
+  public static isSquareDark(x: number, y: number): boolean {
+    return x % 2 === 0 && y % 2 === 0 || x % 2 === 1 && y % 2 === 1;
+  }
+
+  private areCoordsValid(x: number, y: number): boolean {
+    return x >= 0 && y >= 0 && x <= this.chessBoardSize && y <= this.chessBoardSize;
+  }
+
+  public isInCheck(playerColor: Color): boolean {
+    for (let x = 0; x < this.chessBoardSize; x++) {
+      for (let y = 0; y < this.chessBoardSize; y++) {
+        const piece: Piece | null = this.chessBoard[x][y];
+        if (!piece || piece.color === playerColor) continue;
+
+        for (const { x: dx, y: dy } of piece.directions) {
+          let newX: number = x + dx;
+          let newY: number = y + dy;
+
+          if (!this.areCoordsValid(newX, newY)) continue;
+
+          if (piece instanceof Pawn || piece instanceof King || piece instanceof Knight) {
+            //pawns are only attacking diagonally
+            if (piece instanceof Pawn && dy === 0) continue;
+
+            const attackPiece: Piece | null = this.chessBoard[newY][newY]
+
+            if (attackPiece instanceof King && attackPiece.color === playerColor) return true
+          } else {
+            while (this.areCoordsValid(newX, newY)) {
+              const attackPiece: Piece | null = this.chessBoard[newY][newY]
+
+              if (attackPiece instanceof King && attackPiece.color === playerColor) return true
+              if (attackPiece !== null) break;
+
+              newX += dx;
+              newY += dy;
+            }
+          }
+
+        }
+      }
+    }
+
+    return false
+  }
+
+  private isPositionAfterMove(piece: Piece, prevX: number, prevY: number, newX: number, newY: number): boolean {
+    const newPiece: Piece | null = this.chessBoard[newX][newY];
+
+    // we can't put on a square that already contains piece of the same square
+    if(newPiece && newPiece.color === piece.color) return false;
+
+    // simulate position
+    this.chessBoard[prevX][prevY] = null;
+    this.chessBoard[newX][newY] = piece;
+
+    const isPositionSafe: boolean = !this.isInCheck(piece.color);
+
+    // restore position back
+    this.chessBoard[prevX][prevY] = piece;
+    this.chessBoard[newX][newY] = null;
+
+    return isPositionSafe;
+  }
+
+  private findSafeSquares(): SafeSquares {
+    const  safeSquares: SafeSquares = new Map<string, Coords[]>();
+
+    for (let x = 0; x < this.chessBoardSize; x++) {
+      for (let y = 0; y < this.chessBoardSize; y++) {
+        const piece: Piece | null = this.chessBoard[x][y];
+
+        if (!piece || piece.color === this._playerColor) continue;
+
+        const pieceSafeSquare: Coords[] = [];
+
+        for (const { x: dx, y: dy } of piece.directions) {
+          const newX: number = x + dx;
+          const newY: number = y + dy;
+
+          if (!this.areCoordsValid(newX, newY)) continue;
+
+          const newPiece: Piece | null = this.chessBoard[newX][newY];
+          if (newPiece && newPiece.color === piece.color) continue;
+
+          if(piece instanceof Pawn || piece instanceof King || piece instanceof Knight) {
+            if (this.isPositionAfterMove(piece, x, y, newX, newY)) {
+              pieceSafeSquare.push({ x: newX, y: newY })
+            }
+          } else {
+            while ()
+          }
+        }
+      }
+    }
+
+
+    return safeSquares;
   }
 }

@@ -14,7 +14,7 @@ export class Pawn extends Piece {
   constructor(private pieceColor: Color) {
     super(pieceColor);
     if(pieceColor === Color.Black) this.setBlackPawnDirections();
-    this._FENChar = pieceColor === Color.White ? FENChar.WhiteKing : FENChar.BlackKing;
+    this._FENChar = pieceColor === Color.White ? FENChar.WhitePawn : FENChar.BlackPawn;
   }
 
   private setBlackPawnDirections(): void {
